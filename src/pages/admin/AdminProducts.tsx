@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,7 +64,7 @@ export default function AdminProducts() {
 
   const updateProductMutation = useMutation({
     mutationFn: async (product: any) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('products')
         .update({
           name: product.name,
@@ -76,10 +77,14 @@ export default function AdminProducts() {
         .eq('id', product.id);
       
       if (error) throw error;
-      return data;
+      return product;
     },
     onSuccess: () => {
+      // Invalidate and refetch both admin products AND regular products queries
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      
       setIsDialogOpen(false);
       toast({
         title: "Product updated",

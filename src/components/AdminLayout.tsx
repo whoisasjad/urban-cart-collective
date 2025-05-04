@@ -1,9 +1,10 @@
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import AdminNav from '@/components/AdminNav';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -13,26 +14,56 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkAdminAccess = async () => {
-      if (!loading && !user) {
-        toast({
-          title: "Access denied",
-          description: "You must be logged in to access the admin area.",
-          variant: "destructive",
-        });
-        navigate('/auth');
+      if (!loading) {
+        if (!user) {
+          toast({
+            title: "Access denied",
+            description: "You must be logged in to access the admin area.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          return;
+        }
+        
+        // Check if user has admin role
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .eq('role', 'admin')
+            .single();
+          
+          if (error || !data) {
+            toast({
+              title: "Access denied",
+              description: "You don't have permission to access the admin area.",
+              variant: "destructive",
+            });
+            navigate('/');
+            return;
+          }
+          
+          setIsAdmin(true);
+        } catch (error) {
+          toast({
+            title: "Error checking permissions",
+            description: "There was a problem verifying your access.",
+            variant: "destructive",
+          });
+          navigate('/');
+        }
       }
-      
-      // In a real application, you would check if the user has admin role
-      // This is just a placeholder for demonstration
     };
     
     checkAdminAccess();
   }, [user, loading, navigate, toast]);
 
-  if (loading) {
+  if (loading || isAdmin === null) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-urban-dark">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-urban-purple border-t-transparent"></div>
