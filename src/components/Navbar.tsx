@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, LogOut, UserCircle } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, LogOut, UserCircle, LayoutDashboard } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,12 @@ export default function Navbar() {
                     <span>My Account</span>
                   </DropdownMenuItem>
                 </Link>
+                <Link to="/admin">
+                  <DropdownMenuItem className="text-white hover:text-urban-purple">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Admin Dashboard</span>
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem onClick={handleSignOut} className="text-white hover:text-urban-purple">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
@@ -126,6 +132,9 @@ export default function Navbar() {
                   <>
                     <Link to="/profile" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">
                       My Account
+                    </Link>
+                    <Link to="/admin" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">
+                      Admin Dashboard
                     </Link>
                     <Button onClick={handleSignOut} variant="ghost" className="justify-start p-0 text-xl font-medium text-white hover:text-urban-purple transition-colors">
                       Sign out
