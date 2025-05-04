@@ -1,17 +1,29 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Search, User, Menu, X } from 'lucide-react';
+import { ShoppingCart, Search, User, Menu, LogOut, UserCircle } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import CartSidebar from './CartSidebar';
 import SearchOverlay from './SearchOverlay';
 import { useState } from 'react';
 
 export default function Navbar() {
   const { cartItemsCount, toggleCart, toggleSearch } = useStore();
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full bg-urban-dark/80 backdrop-blur-md border-b border-urban-purple/20">
@@ -40,15 +52,44 @@ export default function Navbar() {
             <Search className="h-5 w-5" />
           </Button>
 
-          <Link to="/account">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-white hover:text-urban-purple hover:bg-background/10"
-            >
-              <User className="h-5 w-5" />
-            </Button>
-          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full text-white hover:text-urban-purple hover:bg-background/10"
+                >
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-urban-dark border-urban-purple/30">
+                <DropdownMenuItem className="text-white">
+                  {user.email}
+                </DropdownMenuItem>
+                <Link to="/profile">
+                  <DropdownMenuItem className="text-white hover:text-urban-purple">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>My Account</span>
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuItem onClick={handleSignOut} className="text-white hover:text-urban-purple">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/auth">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-white hover:text-urban-purple hover:bg-background/10"
+              >
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
 
           <Button
             onClick={toggleCart}
@@ -81,6 +122,18 @@ export default function Navbar() {
                 <Link to="/products" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">Shop</Link>
                 <Link to="/about" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">About</Link>
                 <Link to="/contact" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">Contact</Link>
+                {user ? (
+                  <>
+                    <Link to="/profile" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">
+                      My Account
+                    </Link>
+                    <Button onClick={handleSignOut} variant="ghost" className="justify-start p-0 text-xl font-medium text-white hover:text-urban-purple transition-colors">
+                      Sign out
+                    </Button>
+                  </>
+                ) : (
+                  <Link to="/auth" className="text-xl font-medium text-white hover:text-urban-purple transition-colors">Sign in</Link>
+                )}
               </div>
             </SheetContent>
           </Sheet>
