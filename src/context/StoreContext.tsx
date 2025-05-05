@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,6 +33,14 @@ type StoreContextType = {
   clearCart: () => void;
   cartItems: CartItem[];
   refreshProducts: () => Promise<void>;
+  // Add missing properties
+  cart: CartItem[];
+  cartTotal: number;
+  cartItemsCount: number;
+  isCartOpen: boolean;
+  toggleCart: () => void;
+  showSearch: boolean;
+  toggleSearch: () => void;
 };
 
 // Create the StoreContext
@@ -45,6 +54,8 @@ type StoreProviderProps = {
 export function StoreProvider({ children }: StoreProviderProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [showSearch, setShowSearch] = useState<boolean>(false);
 
   // Load cart items from local storage on component mount
   useEffect(() => {
@@ -58,6 +69,28 @@ export function StoreProvider({ children }: StoreProviderProps) {
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
+
+  // Toggle cart visibility
+  const toggleCart = () => {
+    setIsCartOpen(prev => !prev);
+  };
+
+  // Toggle search visibility
+  const toggleSearch = () => {
+    setShowSearch(prev => !prev);
+  };
+
+  // Calculate cart total
+  const cartTotal = cartItems.reduce(
+    (total, item) => total + (item.product.salePrice || item.product.price) * item.quantity,
+    0
+  );
+
+  // Calculate cart items count
+  const cartItemsCount = cartItems.reduce(
+    (count, item) => count + item.quantity,
+    0
+  );
 
   // Function to add a product to the cart
   const addToCart = (product: Product, quantity: number, selectedSize?: string) => {
@@ -180,7 +213,15 @@ export function StoreProvider({ children }: StoreProviderProps) {
         updateCartItemQuantity,
         clearCart,
         cartItems,
-        refreshProducts // Add the refresh function to the context
+        refreshProducts,
+        // Add missing properties to provider value
+        cart: cartItems,
+        cartTotal,
+        cartItemsCount,
+        isCartOpen,
+        toggleCart,
+        showSearch,
+        toggleSearch
       }}
     >
       {children}
