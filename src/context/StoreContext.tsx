@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,6 +51,7 @@ type StoreProviderProps = {
 };
 
 export function StoreProvider({ children }: StoreProviderProps) {
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
@@ -94,6 +94,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
 
   // Function to add a product to the cart
   const addToCart = (product: Product, quantity: number, selectedSize?: string) => {
+    
     setCartItems(prevCartItems => {
       const existingCartItemIndex = prevCartItems.findIndex(item => item.product.id === product.id && item.selectedSize === selectedSize);
 
@@ -111,6 +112,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
 
   // Function to remove a product from the cart
   const removeFromCart = (productId: string, size?: string) => {
+    
     setCartItems(prevCartItems => {
       return prevCartItems.filter(item => item.product.id !== productId || item.selectedSize !== size);
     });
@@ -118,6 +120,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
 
   // Function to update the quantity of a product in the cart
   const updateCartItemQuantity = (productId: string, quantity: number, size?: string) => {
+    
     setCartItems(prevCartItems => {
       return prevCartItems.map(item => {
         if (item.product.id === productId && item.selectedSize === size) {
@@ -136,6 +139,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
   
   // Add a refresh function that can be called when products need to be refreshed
   const refreshProducts = useCallback(async () => {
+    
     try {
       const { data, error } = await supabase
         .from('products')
@@ -169,6 +173,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
 
   // Fetch products from Supabase on component mount
   useEffect(() => {
+    
     const fetchProducts = async () => {
       try {
         const { data, error } = await supabase

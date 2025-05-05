@@ -74,6 +74,11 @@ export default function ProductsPage() {
     }
   });
 
+  // Use effect to log products for debugging
+  useEffect(() => {
+    console.log("Products in ProductsPage:", products);
+  }, [products]);
+
   return (
     <div className="min-h-screen flex flex-col bg-urban-dark">
       <Navbar />

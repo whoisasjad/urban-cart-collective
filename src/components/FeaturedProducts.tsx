@@ -53,9 +53,13 @@ export default function FeaturedProducts() {
         </div>
         
         <div className="product-grid">
-          {featuredProducts && featuredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {featuredProducts && featuredProducts.length > 0 ? (
+            featuredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          ) : (
+            <p className="text-center text-white col-span-full py-8">No featured products available.</p>
+          )}
         </div>
       </div>
     </section>
