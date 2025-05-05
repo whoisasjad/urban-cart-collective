@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import AdminNav from '@/components/AdminNav';
 import { useToast } from '@/components/ui/use-toast';
-import { isUserAdmin } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -31,9 +31,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         
         // Check if user has admin role
         try {
-          const adminStatus = await isUserAdmin(user.id);
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .eq('role', 'admin')
+            .single();
           
-          if (!adminStatus) {
+          if (error || !data) {
             toast({
               title: "Access denied",
               description: "You don't have permission to access the admin area.",

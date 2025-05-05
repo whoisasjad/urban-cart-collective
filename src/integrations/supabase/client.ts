@@ -26,11 +26,7 @@ export const isUserAdmin = async (userId: string): Promise<boolean> => {
       .eq('id', userId)
       .single();
     
-    if (error || !data) {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
-    
+    if (error || !data) return false;
     return data.role === 'admin';
   } catch (error) {
     console.error('Error checking admin status:', error);

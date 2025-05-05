@@ -8,73 +8,22 @@ import { useStore } from '@/context/StoreContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-
-type Category = {
-  id: string;
-  name: string;
-};
 
 export default function ProductsPage() {
-  const { products, refreshProducts } = useStore();
+  const { products } = useStore();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const initialCategory = queryParams.get('category') || '';
   const initialSale = queryParams.get('sale') === 'true';
-  const { toast } = useToast();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [saleOnly, setSaleOnly] = useState(initialSale);
   const [priceRange, setPriceRange] = useState([0, 200]);
   const [sortBy, setSortBy] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
   
-  // Fetch categories from Supabase
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('categories')
-          .select('id, name');
-          
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          setCategories([{ id: 'all', name: 'All' }, ...data]);
-        } else {
-          setCategories([{ id: 'all', name: 'All' }]);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load categories. Please try again later.",
-          variant: "destructive"
-        });
-      }
-    };
-    
-    fetchCategories();
-  }, [toast]);
-
-  // Refresh products on page load
-  useEffect(() => {
-    refreshProducts();
-    console.log("Refreshing products in ProductsPage");
-  }, [refreshProducts]);
-  
-  // Log products for debugging
-  useEffect(() => {
-    console.log("Products in ProductsPage:", products);
-  }, [products]);
-  
-  // Map category IDs to names for better display
-  const getCategoryNameById = (categoryId: string) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : categoryId;
-  };
+  // Get unique categories
+  const categories = ['All', ...new Set(products.map(product => product.category))];
   
   // Filter products based on filters
   const filteredProducts = products.filter(product => {
@@ -88,10 +37,8 @@ export default function ProductsPage() {
     }
     
     // Filter by category
-    if (selectedCategory && selectedCategory !== 'All' && selectedCategory !== 'all') {
-      if (product.category !== selectedCategory) {
-        return false;
-      }
+    if (selectedCategory && selectedCategory !== 'All' && product.category !== selectedCategory) {
+      return false;
     }
     
     // Filter by sale
@@ -156,15 +103,15 @@ export default function ProductsPage() {
                 <div className="space-y-2">
                   {categories.map(category => (
                     <Button
-                      key={category.id}
-                      variant={selectedCategory === category.id ? 'default' : 'ghost'}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={selectedCategory === category.id 
+                      key={category}
+                      variant={selectedCategory === category ? 'default' : 'ghost'}
+                      onClick={() => setSelectedCategory(category)}
+                      className={selectedCategory === category 
                         ? 'bg-urban-purple hover:bg-urban-magenta text-white w-full justify-start'
                         : 'text-muted-foreground hover:text-white hover:bg-secondary/50 w-full justify-start'
                       }
                     >
-                      {category.name}
+                      {category}
                     </Button>
                   ))}
                 </div>

@@ -1,40 +1,36 @@
 
-import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-// Define the Product type
+// Types
 export type Product = {
   id: string;
   name: string;
-  description: string;
   price: number;
-  salePrice: number | null;
-  sale: boolean;
-  featured: boolean;
   category: string;
+  description: string;
   imageUrl: string;
-  sizes: string[] | null;
+  featured?: boolean;
+  sale?: boolean;
+  salePrice?: number;
+  sizes?: string[];
   inStock: boolean;
 };
 
-// Define the CartItem type
 export type CartItem = {
   product: Product;
   quantity: number;
-  size?: string;  // Changed from 'selectedSize' to 'size' to match usage in components
+  size?: string;
 };
 
-// Define the StoreContext type
 type StoreContextType = {
   products: Product[];
-  addToCart: (product: Product, quantity: number, selectedSize?: string) => void;
+  cart: CartItem[];
+  addToCart: (product: Product, quantity: number, size?: string) => void;
   removeFromCart: (productId: string, size?: string) => void;
   updateCartItemQuantity: (productId: string, quantity: number, size?: string) => void;
   clearCart: () => void;
-  cartItems: CartItem[];
-  refreshProducts: () => Promise<void>;
-  // Add missing properties
-  cart: CartItem[];
   cartTotal: number;
   cartItemsCount: number;
   isCartOpen: boolean;
@@ -43,172 +39,218 @@ type StoreContextType = {
   toggleSearch: () => void;
 };
 
-// Create the StoreContext
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-// Create the StoreProvider component
-type StoreProviderProps = {
-  children: React.ReactNode;
-};
+// Sample product data
+const sampleProducts: Product[] = [
+  {
+    id: '1',
+    name: 'Urban Graffiti Hoodie',
+    price: 79.99,
+    category: 'Hoodies',
+    description: 'Bold street-art inspired hoodie with custom graffiti design.',
+    imageUrl: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aG9vZGllfGVufDB8fDB8fHww',
+    featured: true,
+    sizes: ['S', 'M', 'L', 'XL'],
+    inStock: true,
+  },
+  {
+    id: '2',
+    name: 'Street Art Tee',
+    price: 39.99,
+    salePrice: 29.99,
+    category: 'T-Shirts',
+    description: 'Premium cotton t-shirt featuring original street artwork.',
+    imageUrl: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dHNoaXJ0fGVufDB8fDB8fHww',
+    featured: true,
+    sale: true,
+    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    inStock: true,
+  },
+  {
+    id: '3',
+    name: 'Urban Cargo Pants',
+    price: 89.99,
+    category: 'Pants',
+    description: 'Durable cargo pants with multiple pockets and urban styling.',
+    imageUrl: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y2FyZ28lMjBwYW50c3xlbnwwfHwwfHx8MA%3D%3D',
+    sizes: ['28', '30', '32', '34', '36'],
+    inStock: true,
+  },
+  {
+    id: '4',
+    name: 'Graffiti Snapback',
+    price: 34.99,
+    category: 'Accessories',
+    description: 'Adjustable snapback hat with custom graffiti embroidery.',
+    imageUrl: 'https://images.unsplash.com/photo-1556306535-0f09a537f0a3?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8aGF0fGVufDB8fDB8fHww',
+    featured: true,
+    inStock: true,
+  },
+  {
+    id: '5',
+    name: 'Street Style Sneakers',
+    price: 119.99,
+    salePrice: 89.99,
+    category: 'Footwear',
+    description: 'Limited edition sneakers with urban design elements.',
+    imageUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8c25lYWtlcnN8ZW58MHx8MHx8fDA%3D',
+    sale: true,
+    sizes: ['7', '8', '9', '10', '11', '12'],
+    inStock: true,
+  },
+  {
+    id: '6',
+    name: 'Urban Bomber Jacket',
+    price: 149.99,
+    category: 'Jackets',
+    description: 'Stylish bomber jacket with street art-inspired embroidery.',
+    imageUrl: 'https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8Ym9tYmVyJTIwamFja2V0fGVufDB8fDB8fHww',
+    sizes: ['S', 'M', 'L', 'XL'],
+    inStock: true,
+  },
+  {
+    id: '7',
+    name: 'Graffiti Backpack',
+    price: 69.99,
+    category: 'Accessories',
+    description: 'Durable backpack with custom spray paint design.',
+    imageUrl: 'https://images.unsplash.com/photo-1581605405669-fcdf81165afa?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTd8fGJhY2twYWNrfGVufDB8fDB8fHww',
+    inStock: true,
+  },
+  {
+    id: '8',
+    name: 'Street Art Beanie',
+    price: 24.99,
+    category: 'Accessories',
+    description: 'Warm beanie with embroidered street art designs.',
+    imageUrl: 'https://images.unsplash.com/photo-1576871337622-98d48d1cf531?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8YmVhbmllJTIwaGF0fGVufDB8fDB8fHww',
+    featured: true,
+    inStock: true,
+  }
+];
 
-export function StoreProvider({ children }: StoreProviderProps) {
-  
-  const [products, setProducts] = useState<Product[]>([]);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
-  const [showSearch, setShowSearch] = useState<boolean>(false);
+export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [products, setProducts] = useState<Product[]>(sampleProducts);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const { toast } = useToast();
 
-  // Load cart items from local storage on component mount
+  // Load cart from localStorage
   useEffect(() => {
-    const storedCartItems = localStorage.getItem('cartItems');
-    if (storedCartItems) {
-      setCartItems(JSON.parse(storedCartItems));
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (error) {
+        console.error('Error parsing cart data:', error);
+      }
     }
   }, []);
 
-  // Save cart items to local storage whenever cartItems changes
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-  }, [cartItems]);
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
 
-  // Toggle cart visibility
-  const toggleCart = () => {
-    setIsCartOpen(prev => !prev);
-  };
+  // Calculate total
+  const cartTotal = cart.reduce((total, item) => {
+    const price = item.product.salePrice || item.product.price;
+    return total + price * item.quantity;
+  }, 0);
 
-  // Toggle search visibility
-  const toggleSearch = () => {
-    setShowSearch(prev => !prev);
-  };
+  // Calculate total items
+  const cartItemsCount = cart.reduce((count, item) => count + item.quantity, 0);
 
-  // Calculate cart total
-  const cartTotal = cartItems.reduce(
-    (total, item) => total + (item.product.salePrice || item.product.price) * item.quantity,
-    0
-  );
-
-  // Calculate cart items count
-  const cartItemsCount = cartItems.reduce(
-    (count, item) => count + item.quantity,
-    0
-  );
-
-  // Function to add a product to the cart
-  const addToCart = (product: Product, quantity: number, selectedSize?: string) => {
-    
-    setCartItems(prevCartItems => {
-      const existingCartItemIndex = prevCartItems.findIndex(item => 
-        item.product.id === product.id && item.size === selectedSize
+  const addToCart = (product: Product, quantity: number, size?: string) => {
+    setCart((prevCart) => {
+      // Check if this product+size combo is already in the cart
+      const existingItemIndex = prevCart.findIndex(
+        (item) => item.product.id === product.id && item.size === size
       );
 
-      if (existingCartItemIndex !== -1) {
-        // If the item already exists in the cart, update the quantity
-        const newCartItems = [...prevCartItems];
-        newCartItems[existingCartItemIndex].quantity += quantity;
-        return newCartItems;
+      if (existingItemIndex > -1) {
+        // Update quantity of existing item
+        const updatedCart = [...prevCart];
+        updatedCart[existingItemIndex] = {
+          ...updatedCart[existingItemIndex],
+          quantity: updatedCart[existingItemIndex].quantity + quantity,
+        };
+        return updatedCart;
       } else {
-        // If the item doesn't exist in the cart, add it
-        return [...prevCartItems, { product, quantity, size: selectedSize }];
+        // Add new item
+        return [...prevCart, { product, quantity, size }];
       }
     });
-  };
 
-  // Function to remove a product from the cart
-  const removeFromCart = (productId: string, size?: string) => {
-    
-    setCartItems(prevCartItems => {
-      return prevCartItems.filter(item => item.product.id !== productId || item.size !== size);
+    toast({
+      title: "Added to cart",
+      description: `${quantity} x ${product.name} added to your cart.`,
     });
   };
 
-  // Function to update the quantity of a product in the cart
+  const removeFromCart = (productId: string, size?: string) => {
+    setCart((prevCart) => 
+      prevCart.filter(
+        (item) => !(item.product.id === productId && item.size === size)
+      )
+    );
+  };
+
   const updateCartItemQuantity = (productId: string, quantity: number, size?: string) => {
-    
-    setCartItems(prevCartItems => {
-      return prevCartItems.map(item => {
+    setCart((prevCart) => 
+      prevCart.map((item) => {
         if (item.product.id === productId && item.size === size) {
           return { ...item, quantity };
-        } else {
-          return item;
         }
-      }).filter(item => item.quantity > 0); // Remove items with quantity 0 or less
+        return item;
+      }).filter(item => item.quantity > 0)
+    );
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    toast({
+      title: "Cart cleared",
+      description: "All items have been removed from your cart.",
     });
   };
 
-  // Function to clear the cart
-  const clearCart = () => {
-    setCartItems([]);
+  const toggleCart = () => {
+    setIsCartOpen(!isCartOpen);
   };
-  
-  // Add a refresh function that can be called when products need to be refreshed
-  const refreshProducts = useCallback(async () => {
-    
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*, categories(name)');
-        
-      if (error) {
-        console.error('Error fetching products:', error);
-        return;
-      }
-      
-      // Transform the data to match our Product interface
-      const transformedProducts: Product[] = data.map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        salePrice: product.sale_price,
-        sale: product.sale_price !== null,
-        featured: product.featured,
-        category: product.category_id, // Store the category ID
-        imageUrl: product.image_url,
-        sizes: product.sizes,
-        inStock: product.in_stock
-      }));
-      
-      setProducts(transformedProducts);
-    } catch (error) {
-      console.error('Error refreshing products:', error);
-    }
-  }, []);
 
-  // Fetch products from Supabase on component mount
-  useEffect(() => {
-    refreshProducts();
-  }, [refreshProducts]);
-  
+  const toggleSearch = () => {
+    setShowSearch(!showSearch);
+  };
+
   return (
     <StoreContext.Provider
       value={{
         products,
+        cart,
         addToCart,
         removeFromCart,
         updateCartItemQuantity,
         clearCart,
-        cartItems,
-        refreshProducts,
-        // Add missing properties to provider value
-        cart: cartItems,
         cartTotal,
         cartItemsCount,
         isCartOpen,
         toggleCart,
         showSearch,
-        toggleSearch
+        toggleSearch,
       }}
     >
       {children}
     </StoreContext.Provider>
   );
-}
+};
 
-// Create a custom hook to use the StoreContext
-export function useStore() {
+export const useStore = () => {
   const context = useContext(StoreContext);
   if (context === undefined) {
     throw new Error('useStore must be used within a StoreProvider');
   }
   return context;
-}
+};
