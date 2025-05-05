@@ -43,7 +43,7 @@ export default function FeaturedProducts() {
           salePrice: product.sale_price,
           sale: product.sale_price !== null,
           featured: product.featured,
-          category: product.category_id,
+          category: product.category_id, // Would need to be joined with categories
           imageUrl: product.image_url,
           sizes: product.sizes,
           inStock: product.in_stock

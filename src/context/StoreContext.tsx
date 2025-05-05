@@ -146,7 +146,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*');
+        .select('*, categories(name)');
         
       if (error) {
         console.error('Error fetching products:', error);
@@ -162,7 +162,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
         salePrice: product.sale_price,
         sale: product.sale_price !== null,
         featured: product.featured,
-        category: product.category_id, // Would need to be joined with categories
+        category: product.category_id, // Store the category ID
         imageUrl: product.image_url,
         sizes: product.sizes,
         inStock: product.in_stock
@@ -176,41 +176,8 @@ export function StoreProvider({ children }: StoreProviderProps) {
 
   // Fetch products from Supabase on component mount
   useEffect(() => {
-    
-    const fetchProducts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*');
-          
-        if (error) {
-          console.error('Error fetching products:', error);
-          return;
-        }
-        
-        // Transform the data to match our Product interface
-        const transformedProducts: Product[] = data.map((product: any) => ({
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          salePrice: product.sale_price,
-          sale: product.sale_price !== null,
-          featured: product.featured,
-          category: product.category_id, // Would need to be joined with categories
-          imageUrl: product.image_url,
-          sizes: product.sizes,
-          inStock: product.in_stock
-        }));
-        
-        setProducts(transformedProducts);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+    refreshProducts();
+  }, [refreshProducts]);
   
   return (
     <StoreContext.Provider

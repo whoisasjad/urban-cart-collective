@@ -73,7 +73,7 @@ export default function ProductsPage() {
   // Map category IDs to names for better display
   const getCategoryNameById = (categoryId: string) => {
     const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Unknown Category';
+    return category ? category.name : categoryId;
   };
   
   // Filter products based on filters
@@ -89,10 +89,9 @@ export default function ProductsPage() {
     
     // Filter by category
     if (selectedCategory && selectedCategory !== 'All' && selectedCategory !== 'all') {
-      const categoryMatch = categories.some(cat => 
-        (cat.id === product.category || cat.name === selectedCategory) && cat.name !== 'All'
-      );
-      if (!categoryMatch) return false;
+      if (product.category !== selectedCategory) {
+        return false;
+      }
     }
     
     // Filter by sale
@@ -158,9 +157,9 @@ export default function ProductsPage() {
                   {categories.map(category => (
                     <Button
                       key={category.id}
-                      variant={selectedCategory === category.name ? 'default' : 'ghost'}
-                      onClick={() => setSelectedCategory(category.name)}
-                      className={selectedCategory === category.name 
+                      variant={selectedCategory === category.id ? 'default' : 'ghost'}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={selectedCategory === category.id 
                         ? 'bg-urban-purple hover:bg-urban-magenta text-white w-full justify-start'
                         : 'text-muted-foreground hover:text-white hover:bg-secondary/50 w-full justify-start'
                       }
