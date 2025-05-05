@@ -1,13 +1,44 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/context/StoreContext';
 import ProductCard from './ProductCard';
 import { Button } from '@/components/ui/button';
 
 export default function FeaturedProducts() {
   const { products } = useStore();
-  const featuredProducts = products.filter(product => product.featured);
+  
+  // Use React Query to fetch featured products
+  const { data: featuredProducts } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('featured', true);
+        
+      if (error) throw error;
+      
+      // Transform the data to match our Product interface
+      return data.map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        salePrice: product.sale_price,
+        sale: product.sale_price !== null,
+        featured: product.featured,
+        category: product.category_id,
+        imageUrl: product.image_url,
+        sizes: product.sizes,
+        inStock: product.in_stock
+      }));
+    },
+    // Use the products from the store as a fallback
+    placeholderData: () => products.filter(product => product.featured),
+  });
 
   return (
     <section className="py-16">
@@ -22,7 +53,7 @@ export default function FeaturedProducts() {
         </div>
         
         <div className="product-grid">
-          {featuredProducts.map(product => (
+          {featuredProducts && featuredProducts.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

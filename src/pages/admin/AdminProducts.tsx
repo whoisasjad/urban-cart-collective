@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -80,10 +79,8 @@ export default function AdminProducts() {
       return product;
     },
     onSuccess: () => {
-      // Invalidate and refetch both admin products AND regular products queries
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['featured-products'] });
+      // Invalidate ALL product related queries to ensure fresh data everywhere
+      queryClient.invalidateQueries();
       
       setIsDialogOpen(false);
       toast({
