@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,7 +21,7 @@ export type Product = {
 export type CartItem = {
   product: Product;
   quantity: number;
-  selectedSize?: string;
+  size?: string;  // Changed from 'selectedSize' to 'size' to match usage in components
 };
 
 // Define the StoreContext type
@@ -96,7 +97,9 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const addToCart = (product: Product, quantity: number, selectedSize?: string) => {
     
     setCartItems(prevCartItems => {
-      const existingCartItemIndex = prevCartItems.findIndex(item => item.product.id === product.id && item.selectedSize === selectedSize);
+      const existingCartItemIndex = prevCartItems.findIndex(item => 
+        item.product.id === product.id && item.size === selectedSize
+      );
 
       if (existingCartItemIndex !== -1) {
         // If the item already exists in the cart, update the quantity
@@ -105,7 +108,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
         return newCartItems;
       } else {
         // If the item doesn't exist in the cart, add it
-        return [...prevCartItems, { product, quantity, selectedSize }];
+        return [...prevCartItems, { product, quantity, size: selectedSize }];
       }
     });
   };
@@ -114,7 +117,7 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const removeFromCart = (productId: string, size?: string) => {
     
     setCartItems(prevCartItems => {
-      return prevCartItems.filter(item => item.product.id !== productId || item.selectedSize !== size);
+      return prevCartItems.filter(item => item.product.id !== productId || item.size !== size);
     });
   };
 
@@ -123,12 +126,12 @@ export function StoreProvider({ children }: StoreProviderProps) {
     
     setCartItems(prevCartItems => {
       return prevCartItems.map(item => {
-        if (item.product.id === productId && item.selectedSize === size) {
+        if (item.product.id === productId && item.size === size) {
           return { ...item, quantity };
         } else {
           return item;
         }
-      });
+      }).filter(item => item.quantity > 0); // Remove items with quantity 0 or less
     });
   };
 

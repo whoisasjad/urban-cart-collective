@@ -1,35 +1,75 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
-const categories = [
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+};
+
+const defaultCategories = [
   {
     id: 'hoodies',
     name: 'Hoodies',
     image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aG9vZGllfGVufDB8fDB8fHww',
-    url: '/products?category=Hoodies'
+    slug: 'hoodies'
   },
   {
     id: 'tshirts',
     name: 'T-Shirts',
     image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dHNoaXJ0fGVufDB8fDB8fHww',
-    url: '/products?category=T-Shirts'
+    slug: 't-shirts'
   },
   {
     id: 'pants',
     name: 'Pants',
     image: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y2FyZ28lMjBwYW50c3xlbnwwfHwwfHx8MA%3D%3D',
-    url: '/products?category=Pants'
+    slug: 'pants'
   },
   {
     id: 'accessories',
     name: 'Accessories',
     image: 'https://images.unsplash.com/photo-1556306535-0f09a537f0a3?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8aGF0fGVufDB8fDB8fHww',
-    url: '/products?category=Accessories'
+    slug: 'accessories'
   },
 ];
 
 export default function Categories() {
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*');
+        
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const formattedCategories = data.map((cat: any) => ({
+            id: cat.id,
+            name: cat.name,
+            slug: cat.slug,
+            image: defaultCategories.find(c => c.name.toLowerCase() === cat.name.toLowerCase())?.image
+          }));
+          
+          setCategories(formattedCategories);
+        }
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
   return (
     <section className="py-16 bg-gradient-to-b from-urban-dark to-black">
       <div className="container mx-auto px-4">
@@ -39,12 +79,12 @@ export default function Categories() {
           {categories.map((category) => (
             <Link 
               key={category.id}
-              to={category.url}
+              to={`/products?category=${category.name}`}
               className="group relative overflow-hidden rounded-lg aspect-square hover:scale-[1.03] transition-transform"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
               <img 
-                src={category.image} 
+                src={category.image || "https://images.unsplash.com/photo-1556306535-0f09a537f0a3?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8aGF0fGVufDB8fDB8fHww"} 
                 alt={category.name} 
                 className="w-full h-full object-cover transition-transform group-hover:scale-105" 
               />
