@@ -168,7 +168,7 @@ export default function ProductsPage() {
             {/* Products */}
             <div className="lg:col-span-3">
               {isLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="product-grid">
                   {[1, 2, 3, 4, 5, 6].map(i => (
                     <div key={i} className="urban-card animate-pulse">
                       <div className="aspect-square bg-muted-foreground/20"></div>
@@ -181,7 +181,7 @@ export default function ProductsPage() {
                   ))}
                 </div>
               ) : sortedProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="product-grid">
                   {sortedProducts.map(product => (
                     <ProductCard key={product.id} product={product} />
                   ))}

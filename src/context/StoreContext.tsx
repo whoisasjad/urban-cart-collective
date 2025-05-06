@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -166,7 +165,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         featured: item.featured || false,
         sale: item.sale_price !== null,
         salePrice: item.sale_price ? item.sale_price / 100 : undefined,
-        sizes: item.sizes,
+        sizes: item.sizes ? JSON.parse(item.sizes) : undefined,
         inStock: item.in_stock
       }));
       
