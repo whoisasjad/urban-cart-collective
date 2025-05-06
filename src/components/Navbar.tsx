@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import CartSidebar from './CartSidebar';
+import MiniCart from './MiniCart';
 import SearchOverlay from './SearchOverlay';
 import { useState } from 'react';
 
@@ -97,19 +97,24 @@ export default function Navbar() {
             </Link>
           )}
 
-          <Button
-            onClick={toggleCart}
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-white hover:text-urban-purple hover:bg-background/10 relative"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartItemsCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-urban-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                {cartItemsCount}
-              </span>
-            )}
-          </Button>
+          <Link to="/cart">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full text-white hover:text-urban-purple hover:bg-background/10 relative"
+              onClick={(e) => {
+                e.preventDefault();
+                toggleCart();
+              }}
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-urban-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                  {cartItemsCount}
+                </span>
+              )}
+            </Button>
+          </Link>
 
           {/* Mobile Menu Trigger */}
           <Sheet>
@@ -149,8 +154,8 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Cart Sidebar */}
-      <CartSidebar />
+      {/* Mini Cart */}
+      <MiniCart />
       
       {/* Search Overlay */}
       <SearchOverlay />
