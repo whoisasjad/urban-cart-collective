@@ -24,7 +24,7 @@ export default function CartSidebar() {
         className="absolute inset-0"
         onClick={toggleCart}
       />
-      <div className="relative w-full max-w-md bg-background border-l border-urban-purple/30 h-full overflow-hidden animate-slide-in-right flex flex-col">
+      <div className="relative w-full max-w-md bg-urban-dark border-l border-urban-purple/30 h-full overflow-hidden animate-slide-in-right flex flex-col">
         <div className="p-4 border-b border-urban-purple/30 flex justify-between items-center">
           <h2 className="text-xl font-graffiti text-white">Your Cart</h2>
           <Button 

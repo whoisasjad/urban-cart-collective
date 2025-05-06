@@ -16,7 +16,7 @@ export default function FeaturedProducts() {
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl sm:text-4xl font-graffiti text-white">Featured <span className="text-urban-purple">Products</span></h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="product-grid">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="urban-card animate-pulse">
                 <div className="aspect-square bg-muted-foreground/20"></div>
@@ -71,7 +71,7 @@ export default function FeaturedProducts() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="product-grid">
           {featuredProducts.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
