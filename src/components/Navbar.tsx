@@ -97,24 +97,22 @@ export default function Navbar() {
             </Link>
           )}
 
-          <Link to="/cart">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full text-white hover:text-urban-purple hover:bg-background/10 relative"
-              onClick={(e) => {
-                e.preventDefault();
-                toggleCart();
-              }}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-urban-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                  {cartItemsCount}
-                </span>
-              )}
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full text-white hover:text-urban-purple hover:bg-background/10 relative"
+            onClick={(e) => {
+              e.preventDefault();
+              toggleCart();
+            }}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-urban-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                {cartItemsCount}
+              </span>
+            )}
+          </Button>
 
           {/* Mobile Menu Trigger */}
           <Sheet>
