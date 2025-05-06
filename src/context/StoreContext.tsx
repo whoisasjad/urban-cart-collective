@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -165,7 +166,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         featured: item.featured || false,
         sale: item.sale_price !== null,
         salePrice: item.sale_price ? item.sale_price / 100 : undefined,
-        sizes: item.sizes ? JSON.parse(item.sizes) : undefined,
+        sizes: processSizes(item.sizes),
         inStock: item.in_stock
       }));
       
@@ -174,6 +175,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     },
     staleTime: 60000, // 1 minute
   });
+
+  // Helper function to process sizes field safely
+  const processSizes = (sizes: any): string[] | undefined => {
+    if (!sizes) return undefined;
+    
+    // If it's already a string array, return it
+    if (Array.isArray(sizes)) return sizes;
+    
+    // If it's a JSON string, parse it
+    if (typeof sizes === 'string') {
+      try {
+        const parsed = JSON.parse(sizes);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch (error) {
+        console.error('Error parsing sizes JSON:', error);
+        return undefined;
+      }
+    }
+    
+    // If it's already an object (but not array), try to convert if possible
+    if (typeof sizes === 'object') {
+      try {
+        // Convert to string and parse back if needed
+        return JSON.parse(JSON.stringify(sizes));
+      } catch (error) {
+        console.error('Error converting sizes object:', error);
+        return undefined;
+      }
+    }
+    
+    return undefined;
+  };
 
   // Load cart from localStorage
   useEffect(() => {
