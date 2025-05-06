@@ -187,6 +187,7 @@ export type Database = {
           last_name: string | null
           phone: string | null
           postal_code: string | null
+          role: string | null
           state: string | null
           updated_at: string
         }
@@ -200,6 +201,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           postal_code?: string | null
+          role?: string | null
           state?: string | null
           updated_at?: string
         }
@@ -213,6 +215,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           postal_code?: string | null
+          role?: string | null
           state?: string | null
           updated_at?: string
         }

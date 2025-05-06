@@ -20,6 +20,11 @@ export default function ProductCard({ product }: ProductCardProps) {
     addToCart(product, 1);
   };
 
+  if (!product) {
+    console.error("Received invalid product in ProductCard");
+    return null;
+  }
+
   return (
     <Link to={`/products/${product.id}`} className="group">
       <div className="urban-card group-hover:scale-[1.02]">

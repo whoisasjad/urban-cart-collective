@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
 
 // Types
 export type Product = {
@@ -37,11 +38,12 @@ type StoreContextType = {
   toggleCart: () => void;
   showSearch: boolean;
   toggleSearch: () => void;
+  isLoading: boolean;
 };
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-// Sample product data
+// Sample product data as fallback
 const sampleProducts: Product[] = [
   {
     id: '1',
@@ -131,11 +133,48 @@ const sampleProducts: Product[] = [
 ];
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(sampleProducts);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const { toast } = useToast();
+  
+  // Fetch products from Supabase
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      console.log('Fetching products from Supabase');
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories(name)
+        `);
+      
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      
+      // Transform the data to match our Product type
+      const transformedProducts: Product[] = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price / 100, // Convert cents to dollars
+        category: item.categories?.name || 'Uncategorized',
+        description: item.description,
+        imageUrl: item.image_url,
+        featured: item.featured || false,
+        sale: item.sale_price !== null,
+        salePrice: item.sale_price ? item.sale_price / 100 : undefined,
+        sizes: item.sizes,
+        inStock: item.in_stock
+      }));
+      
+      console.log('Products fetched from database:', transformedProducts);
+      return transformedProducts;
+    },
+    staleTime: 60000, // 1 minute
+  });
 
   // Load cart from localStorage
   useEffect(() => {
@@ -240,6 +279,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleCart,
         showSearch,
         toggleSearch,
+        isLoading
       }}
     >
       {children}

@@ -2,7 +2,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
     --background: 240 10% 3.9%;
@@ -10,68 +10,87 @@
 
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-
+ 
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-
-    --primary: 266 84% 74%;
-    --primary-foreground: 0 0% 100%;
-
+ 
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+ 
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
-
+ 
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-
+ 
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
-
+ 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-
+ 
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 266 84% 74%;
-
+    --ring: 240 4.9% 83.9%;
+ 
     --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+ 
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+ 
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+ 
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+ 
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+ 
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+ 
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+ 
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+ 
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
-  }
-
-  .graffiti-text {
-    @apply font-graffiti tracking-wider;
-  }
-
-  .urban-card {
-    @apply bg-secondary/70 backdrop-blur-sm border border-urban-purple/30 rounded-lg shadow-lg overflow-hidden transition-transform hover:shadow-urban-purple/20;
-  }
-
-  .urban-button {
-    @apply px-6 py-3 bg-urban-purple text-white font-bold rounded-lg transition-all hover:bg-urban-magenta hover:scale-105 focus:ring-2 focus:ring-urban-purple/50 active:scale-95;
-  }
-
-  .urban-border {
-    @apply border-2 border-urban-purple/50;
-  }
-
-  .product-grid {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@layer components {
+  .urban-card {
+    @apply bg-background/60 rounded-md shadow-lg backdrop-blur-md border border-urban-purple/20 transition duration-300;
+  }
+  
+  .font-graffiti {
+    font-family: "Permanent Marker", cursive;
+  }
+}
+
+/* Global product grid styling */
+.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-3,
+.grid-cols-1.sm\:grid-cols-2.lg\:grid-cols-4,
+.product-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+}
+

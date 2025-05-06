@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 
 export default function ProductsPage() {
-  const { products } = useStore();
+  const { products, isLoading } = useStore();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const initialCategory = queryParams.get('category') || '';
@@ -167,8 +167,21 @@ export default function ProductsPage() {
             
             {/* Products */}
             <div className="lg:col-span-3">
-              {sortedProducts.length > 0 ? (
-                <div className="product-grid">
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="urban-card animate-pulse">
+                      <div className="aspect-square bg-muted-foreground/20"></div>
+                      <div className="p-4 space-y-2">
+                        <div className="h-5 bg-muted-foreground/20 rounded w-3/4"></div>
+                        <div className="h-4 bg-muted-foreground/20 rounded w-1/2"></div>
+                        <div className="h-8 bg-muted-foreground/20 rounded w-full mt-4"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : sortedProducts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {sortedProducts.map(product => (
                     <ProductCard key={product.id} product={product} />
                   ))}
