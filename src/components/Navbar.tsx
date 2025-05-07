@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Search, User, Menu, LogOut, UserCircle, LayoutDashboard } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
@@ -12,14 +12,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import MiniCart from './MiniCart';
 import SearchOverlay from './SearchOverlay';
-import { useState } from 'react';
+import MiniCart from './MiniCart';
 
 export default function Navbar() {
-  const { cartItemsCount, toggleCart, toggleSearch } = useStore();
+  const { cartItemsCount, toggleSearch } = useStore();
   const { user, signOut } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showMiniCart, setShowMiniCart] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -97,22 +96,28 @@ export default function Navbar() {
             </Link>
           )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full text-white hover:text-urban-purple hover:bg-background/10 relative"
-            onClick={(e) => {
-              e.preventDefault();
-              toggleCart();
-            }}
+          <div className="relative" 
+            onMouseEnter={() => setShowMiniCart(true)}
+            onMouseLeave={() => setShowMiniCart(false)}
           >
-            <ShoppingCart className="h-5 w-5" />
-            {cartItemsCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-urban-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                {cartItemsCount}
-              </span>
-            )}
-          </Button>
+            <Link to="/cart">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full text-white hover:text-urban-purple hover:bg-background/10 relative"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-urban-purple text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+                    {cartItemsCount}
+                  </span>
+                )}
+              </Button>
+            </Link>
+
+            {/* Mini Cart Dropdown */}
+            {showMiniCart && cartItemsCount > 0 && <MiniCart />}
+          </div>
 
           {/* Mobile Menu Trigger */}
           <Sheet>
@@ -151,9 +156,6 @@ export default function Navbar() {
           </Sheet>
         </div>
       </div>
-
-      {/* Mini Cart */}
-      <MiniCart />
       
       {/* Search Overlay */}
       <SearchOverlay />

@@ -33,8 +33,6 @@ type StoreContextType = {
   clearCart: () => void;
   cartTotal: number;
   cartItemsCount: number;
-  isCartOpen: boolean;
-  toggleCart: () => void;
   showSearch: boolean;
   toggleSearch: () => void;
   isLoading: boolean;
@@ -133,7 +131,6 @@ const sampleProducts: Product[] = [
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const { toast } = useToast();
   
@@ -287,10 +284,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
-  const toggleCart = () => {
-    setIsCartOpen(!isCartOpen);
-  };
-
   const toggleSearch = () => {
     setShowSearch(!showSearch);
   };
@@ -306,8 +299,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         clearCart,
         cartTotal,
         cartItemsCount,
-        isCartOpen,
-        toggleCart,
         showSearch,
         toggleSearch,
         isLoading
