@@ -87,7 +87,7 @@ export default function MiniCart() {
               View Cart
             </Button>
           </Link>
-          <Link to="/cart" className="w-full">
+          <Link to="/checkout" className="w-full">
             <Button 
               className="w-full bg-urban-purple hover:bg-urban-magenta"
             >
