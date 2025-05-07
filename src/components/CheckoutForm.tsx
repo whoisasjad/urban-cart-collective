@@ -9,7 +9,22 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CreditCard, Banknote, Building } from 'lucide-react';
+import { CreditCard, Banknote, Building, Whatsapp } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export default function CheckoutForm() {
   const { cart, cartTotal, clearCart } = useStore();
@@ -120,7 +135,7 @@ export default function CheckoutForm() {
       if (paymentMethod === 'cash_on_delivery') {
         successMessage += "You will pay when your order is delivered.";
       } else if (paymentMethod === 'bank_transfer') {
-        successMessage += "Please complete the bank transfer using the details sent to your email.";
+        successMessage += "Please complete the bank transfer using the details shown below.";
       } else {
         successMessage += "Your payment has been processed.";
       }
@@ -130,7 +145,10 @@ export default function CheckoutForm() {
         description: successMessage,
       });
       
-      navigate('/');
+      // Navigate to home only for non-bank transfer payments
+      if (paymentMethod !== 'bank_transfer') {
+        navigate('/');
+      }
       
     } catch (error: any) {
       toast({
@@ -142,6 +160,55 @@ export default function CheckoutForm() {
       setLoading(false);
     }
   };
+
+  // Bank transfer details component
+  const BankTransferDetails = () => (
+    <div className="urban-card p-6 mt-6 border border-urban-purple/30 animate-fade-in">
+      <h3 className="text-xl font-semibold text-white mb-4">Bank Transfer Details</h3>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Bank Name</p>
+            <p className="text-white">Urban Bank Ltd.</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Account Name</p>
+            <p className="text-white">Urban Threads Inc.</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Account Number</p>
+            <p className="text-white font-medium">1234-5678-9012-3456</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Branch Code</p>
+            <p className="text-white">005</p>
+          </div>
+        </div>
+        
+        <div>
+          <p className="text-sm text-muted-foreground">Reference</p>
+          <p className="text-white">Your Order # + Full Name</p>
+        </div>
+        
+        <div className="bg-background/10 p-4 rounded-md">
+          <h4 className="text-urban-purple flex items-center gap-2 mb-2">
+            <Whatsapp className="h-5 w-5" />
+            <span>Send Payment Confirmation</span>
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            After completing your payment, please send a screenshot of your payment confirmation to:
+          </p>
+          <p className="text-white font-medium mt-1">+1 (555) 123-4567</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Please include your order number and full name in your message.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
   
   return (
     <div className="max-w-3xl mx-auto">
@@ -315,6 +382,9 @@ export default function CheckoutForm() {
               </label>
             </RadioGroup>
           </div>
+          
+          {/* Show bank transfer details if that payment method is selected */}
+          {paymentMethod === 'bank_transfer' && <BankTransferDetails />}
           
           <Button
             type="submit"
