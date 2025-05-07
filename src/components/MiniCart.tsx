@@ -9,6 +9,25 @@ import { formatCurrency } from '@/lib/utils';
 export default function MiniCart() {
   const { cart, removeFromCart, cartTotal } = useStore();
 
+  // If cart is empty, show a message
+  if (cart.length === 0) {
+    return (
+      <div className="absolute right-0 mt-2 w-80 bg-urban-dark border border-urban-purple/30 rounded-md shadow-lg z-50 animate-fade-in overflow-hidden">
+        <div className="p-4 border-b border-urban-purple/30">
+          <h3 className="text-lg font-medium text-white">Your Cart (0)</h3>
+        </div>
+        <div className="p-8 text-center">
+          <p className="text-muted-foreground mb-4">Your cart is empty</p>
+          <Link to="/products">
+            <Button variant="outline" className="border-urban-purple/50 text-white">
+              Browse Products
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute right-0 mt-2 w-80 bg-urban-dark border border-urban-purple/30 rounded-md shadow-lg z-50 animate-fade-in overflow-hidden">
       <div className="p-4 border-b border-urban-purple/30">

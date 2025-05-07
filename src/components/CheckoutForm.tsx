@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { CreditCard, Banknote, Building } from 'lucide-react';
 
 export default function CheckoutForm() {
   const { cart, cartTotal, clearCart } = useStore();
@@ -26,6 +28,7 @@ export default function CheckoutForm() {
     phone: ''
   });
   
+  const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [loading, setLoading] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,12 +82,16 @@ export default function CheckoutForm() {
           user_id: user.id,
           total: Math.round(cartTotal * 100), // Store in cents
           shipping_address: shippingAddress,
-          status: 'pending'
+          status: 'pending',
+          payment_method: paymentMethod
         })
         .select()
         .single();
       
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error("Order creation error:", orderError);
+        throw orderError;
+      }
       
       // Create order items for each product in the cart
       const orderItems = cart.map(item => ({
@@ -99,14 +106,28 @@ export default function CheckoutForm() {
         .from('order_items')
         .insert(orderItems);
       
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Order items creation error:", itemsError);
+        throw itemsError;
+      }
       
       // Clear the cart after successful order
       clearCart();
       
+      // Show success message based on payment method
+      let successMessage = "Thank you for your purchase. ";
+      
+      if (paymentMethod === 'cash_on_delivery') {
+        successMessage += "You will pay when your order is delivered.";
+      } else if (paymentMethod === 'bank_transfer') {
+        successMessage += "Please complete the bank transfer using the details sent to your email.";
+      } else {
+        successMessage += "Your payment has been processed.";
+      }
+      
       toast({
         title: "Order placed successfully!",
-        description: "Thank you for your purchase. You will receive a confirmation email shortly.",
+        description: successMessage,
       });
       
       navigate('/');
@@ -152,7 +173,7 @@ export default function CheckoutForm() {
         </div>
       </div>
       
-      <div className="urban-card p-6">
+      <div className="urban-card p-6 mb-8">
         <h2 className="text-xl font-bold text-white mb-4">Shipping Information</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -263,9 +284,41 @@ export default function CheckoutForm() {
             />
           </div>
           
+          <div className="mt-6">
+            <h3 className="text-lg font-medium text-white mb-3">Payment Method</h3>
+            <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+              <label className="flex items-center space-x-3 p-3 border border-urban-purple/30 rounded-md cursor-pointer hover:bg-secondary/20">
+                <RadioGroupItem value="cash_on_delivery" id="cod" />
+                <Banknote className="h-5 w-5 text-urban-purple mr-2" />
+                <div>
+                  <p className="font-medium text-white">Cash on Delivery</p>
+                  <p className="text-sm text-muted-foreground">Pay when you receive your order</p>
+                </div>
+              </label>
+              
+              <label className="flex items-center space-x-3 p-3 border border-urban-purple/30 rounded-md cursor-pointer hover:bg-secondary/20">
+                <RadioGroupItem value="bank_transfer" id="bank" />
+                <Building className="h-5 w-5 text-urban-purple mr-2" />
+                <div>
+                  <p className="font-medium text-white">Bank Transfer</p>
+                  <p className="text-sm text-muted-foreground">Pay via bank transfer</p>
+                </div>
+              </label>
+              
+              <label className="flex items-center space-x-3 p-3 border border-urban-purple/30 rounded-md cursor-pointer hover:bg-secondary/20 opacity-60">
+                <RadioGroupItem value="credit_card" id="card" disabled />
+                <CreditCard className="h-5 w-5 text-urban-purple mr-2" />
+                <div>
+                  <p className="font-medium text-white">Credit Card</p>
+                  <p className="text-sm text-muted-foreground">Coming soon</p>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+          
           <Button
             type="submit"
-            className="w-full bg-urban-purple hover:bg-urban-magenta mt-4"
+            className="w-full bg-urban-purple hover:bg-urban-magenta mt-8"
             disabled={loading}
           >
             {loading ? "Processing..." : "Complete Purchase"}
