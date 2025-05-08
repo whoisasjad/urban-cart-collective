@@ -48,12 +48,54 @@ export default function CheckoutForm() {
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  // Function to send order confirmation emails
+  const sendOrderEmails = async (orderDetails: any, userEmail: string) => {
+    try {
+      setSendingEmails(true);
+      
+      const response = await fetch(`https://blrbdhfzbjxxuntdulor.supabase.co/functions/v1/send-order-emails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderDetails,
+          customerEmail: userEmail
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send order confirmation emails');
+      }
+      
+      console.log('Order emails sent successfully:', result);
+      
+      toast({
+        title: "Order confirmation sent",
+        description: "We've sent you an email with your order details.",
+      });
+      
+    } catch (error) {
+      console.error('Error sending order emails:', error);
+      toast({
+        title: "Email notification failed",
+        description: "We couldn't send the order confirmation email. Please check your order in your account.",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingEmails(false);
+    }
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,20 +192,24 @@ export default function CheckoutForm() {
       });
       
       // Save the order details for the confirmation dialog
-      setOrderDetails({
+      const completeOrderDetails = {
         id: order.id,
         created_at: order.created_at,
         total: order.total,
         payment_method: order.payment_method,
         shipping_address: shippingAddress,
         items: orderItemsWithDetails
-      });
+      };
       
-      // Show the confirmation dialog first, then clear the cart
+      setOrderDetails(completeOrderDetails);
+      
+      // Show the confirmation dialog
       setOrderSuccess(true);
       
-      // Important: Now we do NOT clear the cart here immediately
-      // It will be cleared after the user interacts with the confirmation dialog
+      // Send order confirmation emails
+      if (user.email) {
+        await sendOrderEmails(completeOrderDetails, user.email);
+      }
       
     } catch (error: any) {
       toast({
@@ -405,9 +451,9 @@ export default function CheckoutForm() {
           <Button
             type="submit"
             className="w-full bg-urban-purple hover:bg-urban-magenta mt-8"
-            disabled={loading}
+            disabled={loading || sendingEmails}
           >
-            {loading ? "Processing..." : "Complete Purchase"}
+            {loading ? "Processing..." : sendingEmails ? "Sending Confirmation..." : "Complete Purchase"}
           </Button>
         </form>
       </div>

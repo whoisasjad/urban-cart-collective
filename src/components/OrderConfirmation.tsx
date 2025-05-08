@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
-import { Download, ShoppingBag } from 'lucide-react';
+import { Download, ShoppingBag, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -214,6 +214,10 @@ const OrderConfirmation = ({ open, onOpenChange, orderDetails }: OrderConfirmati
           <p className="text-sm text-muted-foreground">
             Your order #{orderDetails.id.substring(0, 8)} has been placed successfully.
           </p>
+          <div className="flex items-center justify-center text-sm text-muted-foreground mt-2">
+            <Mail className="h-4 w-4 mr-1" />
+            <span>A confirmation email has been sent to your email address.</span>
+          </div>
         </div>
         
         <div className="space-y-4 mt-4">
