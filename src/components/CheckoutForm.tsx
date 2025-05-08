@@ -25,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import OrderConfirmation from './OrderConfirmation';
 
 export default function CheckoutForm() {
   const { cart, cartTotal, clearCart } = useStore();
@@ -45,6 +46,8 @@ export default function CheckoutForm() {
   
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [loading, setLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderDetails, setOrderDetails] = useState(null);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -126,29 +129,41 @@ export default function CheckoutForm() {
         throw itemsError;
       }
       
+      // Fetch product details for the order items
+      const productIds = cart.map(item => item.product.id);
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, name, image_url')
+        .in('id', productIds);
+      
+      // Create complete order details for the confirmation
+      const orderItemsWithDetails = orderItems.map(item => {
+        const cartItem = cart.find(ci => ci.product.id === item.product_id);
+        const product = products?.find(p => p.id === item.product_id);
+        return {
+          ...item,
+          product: {
+            name: product?.name || cartItem?.product.name || 'Product',
+            image_url: product?.image_url || cartItem?.product.imageUrl || ''
+          }
+        };
+      });
+      
+      // Save the order details for the confirmation dialog
+      setOrderDetails({
+        id: order.id,
+        created_at: order.created_at,
+        total: order.total,
+        payment_method: order.payment_method,
+        shipping_address: shippingAddress,
+        items: orderItemsWithDetails
+      });
+      
       // Clear the cart after successful order
       clearCart();
       
-      // Show success message based on payment method
-      let successMessage = "Thank you for your purchase. ";
-      
-      if (paymentMethod === 'cash_on_delivery') {
-        successMessage += "You will pay when your order is delivered.";
-      } else if (paymentMethod === 'bank_transfer') {
-        successMessage += "Please complete the bank transfer using the details shown below.";
-      } else {
-        successMessage += "Your payment has been processed.";
-      }
-      
-      toast({
-        title: "Order placed successfully!",
-        description: successMessage,
-      });
-      
-      // Navigate to home only for non-bank transfer payments
-      if (paymentMethod !== 'bank_transfer') {
-        navigate('/');
-      }
+      // Show the confirmation dialog
+      setOrderSuccess(true);
       
     } catch (error: any) {
       toast({
@@ -395,6 +410,19 @@ export default function CheckoutForm() {
           </Button>
         </form>
       </div>
+      
+      {/* Order confirmation dialog */}
+      <OrderConfirmation 
+        open={orderSuccess}
+        onOpenChange={(open) => {
+          setOrderSuccess(open);
+          if (!open) {
+            // If dialog is closed without continuing shopping, redirect to home
+            navigate('/');
+          }
+        }}
+        orderDetails={orderDetails}
+      />
     </div>
   );
 }
