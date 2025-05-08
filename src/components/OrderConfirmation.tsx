@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface OrderItem {
   product_id: string;
@@ -64,57 +66,132 @@ const OrderConfirmation = ({ open, onOpenChange, orderDetails }: OrderConfirmati
     navigate('/');
   };
   
-  // Generate and download invoice
+  // Generate and download PDF invoice
   const downloadInvoice = () => {
-    // Create invoice content
-    const invoiceContent = `
-      URBAN THREADS - ORDER INVOICE
-      ============================
-      
-      Order #: ${orderDetails.id}
-      Date: ${formattedDate}
-      
-      CUSTOMER INFORMATION
-      -------------------
-      Name: ${orderDetails.shipping_address.firstName} ${orderDetails.shipping_address.lastName}
-      Address: ${orderDetails.shipping_address.address}
-      City: ${orderDetails.shipping_address.city}, ${orderDetails.shipping_address.state} ${orderDetails.shipping_address.postalCode}
-      Country: ${orderDetails.shipping_address.country}
-      Phone: ${orderDetails.shipping_address.phone}
-      
-      ITEMS
-      -----
-      ${orderDetails.items.map(item => 
-        `${item.product.name} ${item.size ? `(${item.size})` : ''} x ${item.quantity} - ${formatCurrency(item.price / 100 * item.quantity)}`
-      ).join('\n      ')}
-      
-      TOTAL: ${formatCurrency(orderDetails.total / 100)}
-      
-      PAYMENT METHOD: ${orderDetails.payment_method === 'cash_on_delivery' ? 'Cash on Delivery' : 
-                        orderDetails.payment_method === 'bank_transfer' ? 'Bank Transfer' : 
-                        'Credit Card'}
-      
-      Thank you for shopping with Urban Threads!
-    `;
+    // Create new PDF document
+    const doc = new jsPDF();
     
-    // Create a Blob with the invoice content
-    const blob = new Blob([invoiceContent], { type: 'text/plain' });
+    // Add company logo/header
+    doc.setFillColor(88, 86, 214); // Urban purple color
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 40, 'F');
     
-    // Create an object URL for the Blob
-    const url = URL.createObjectURL(blob);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('URBAN THREADS', 105, 20, { align: 'center' });
     
-    // Create a temporary anchor element to trigger the download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `invoice-${orderDetails.id}.txt`;
-    document.body.appendChild(link);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('INVOICE', 105, 30, { align: 'center' });
     
-    // Trigger the download
-    link.click();
+    // Add order information
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
     
-    // Clean up the URL and remove the link
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const leftMargin = 15;
+    let yPos = 50;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('ORDER DETAILS', leftMargin, yPos);
+    yPos += 7;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Order #: ${orderDetails.id}`, leftMargin, yPos);
+    yPos += 7;
+    
+    doc.text(`Date: ${formattedDate}`, leftMargin, yPos);
+    yPos += 15;
+    
+    // Add customer information
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOMER INFORMATION', leftMargin, yPos);
+    yPos += 7;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${orderDetails.shipping_address.firstName} ${orderDetails.shipping_address.lastName}`, leftMargin, yPos);
+    yPos += 7;
+    
+    doc.text(orderDetails.shipping_address.address, leftMargin, yPos);
+    yPos += 7;
+    
+    doc.text(`${orderDetails.shipping_address.city}, ${orderDetails.shipping_address.state} ${orderDetails.shipping_address.postalCode}`, leftMargin, yPos);
+    yPos += 7;
+    
+    doc.text(`Country: ${orderDetails.shipping_address.country}`, leftMargin, yPos);
+    yPos += 7;
+    
+    doc.text(`Phone: ${orderDetails.shipping_address.phone}`, leftMargin, yPos);
+    yPos += 15;
+    
+    // Add items table
+    doc.setFont('helvetica', 'bold');
+    doc.text('ORDER ITEMS', leftMargin, yPos);
+    yPos += 10;
+    
+    // Create table for items
+    const tableData = orderDetails.items.map(item => [
+      item.product.name + (item.size ? ` (${item.size})` : ''),
+      item.quantity.toString(),
+      formatCurrency(item.price / 100),
+      formatCurrency((item.price / 100) * item.quantity)
+    ]);
+    
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Product', 'Quantity', 'Unit Price', 'Total']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { 
+        fillColor: [88, 86, 214],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 9
+      },
+      margin: { left: leftMargin }
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+    
+    // Add payment information
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT INFORMATION', leftMargin, yPos);
+    yPos += 7;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Payment Method: ${
+      orderDetails.payment_method === 'cash_on_delivery' ? 'Cash on Delivery' : 
+      orderDetails.payment_method === 'bank_transfer' ? 'Bank Transfer' : 
+      'Credit Card'
+    }`, leftMargin, yPos);
+    yPos += 7;
+    
+    // Total amount with tax
+    doc.text(`Subtotal: ${formatCurrency(orderDetails.total / 100)}`, leftMargin, yPos);
+    yPos += 7;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total: ${formatCurrency(orderDetails.total / 100)}`, leftMargin, yPos);
+    yPos += 20;
+    
+    // Thank you note
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Thank you for shopping with Urban Threads!', 105, yPos, { align: 'center' });
+    yPos += 7;
+    
+    doc.text('We look forward to seeing you again soon.', 105, yPos, { align: 'center' });
+    
+    // Footer
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Urban Threads Inc. • 123 Fashion Street • New York, NY 10001 • USA', 105, pageHeight - 10, { align: 'center' });
+    
+    // Save PDF
+    doc.save(`urban-threads-invoice-${orderDetails.id.substring(0, 8)}.pdf`);
   };
   
   return (
