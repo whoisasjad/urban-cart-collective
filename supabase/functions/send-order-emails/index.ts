@@ -24,7 +24,7 @@ serve(async (req) => {
       throw new Error("Missing required order information");
     }
 
-    const adminEmail = "admin@urbanthreads.com"; // Replace with your actual admin email
+    const adminEmail = "lynixdevs@gmail.com"; // Replace with your actual admin email
     
     // Format date
     const orderDate = new Date(orderDetails.created_at);
@@ -56,7 +56,7 @@ serve(async (req) => {
 
     // Send email to customer
     const customerEmailResponse = await resend.emails.send({
-      from: "Urban Threads <orders@urbanthreads.com>", // Update with your verified domain
+      from: "Urban Threads <orders@asjad.co>", // Update with your verified domain
       to: [customerEmail],
       subject: `Order Confirmed! #${orderDetails.id.substring(0, 8)}`,
       html: `
