@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CreditCard, Banknote, Building, Whatsapp } from 'lucide-react';
+import { CreditCard, Banknote, Building, MessageSquare } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -195,7 +195,7 @@ export default function CheckoutForm() {
         
         <div className="bg-background/10 p-4 rounded-md">
           <h4 className="text-urban-purple flex items-center gap-2 mb-2">
-            <Whatsapp className="h-5 w-5" />
+            <MessageSquare className="h-5 w-5" />
             <span>Send Payment Confirmation</span>
           </h4>
           <p className="text-sm text-muted-foreground">
