@@ -101,7 +101,7 @@ serve(async (req) => {
 
     // Send email to admin
     const adminEmailResponse = await resend.emails.send({
-      from: "Urban Threads <orders@urbanthreads.com>", // Update with your verified domain
+      from: "Urban Threads <orders@asjad.co>", // Update with your verified domain
       to: [adminEmail],
       subject: `New Order: #${orderDetails.id.substring(0, 8)}`,
       html: `
