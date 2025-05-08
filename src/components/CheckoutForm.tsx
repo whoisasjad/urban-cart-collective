@@ -159,11 +159,11 @@ export default function CheckoutForm() {
         items: orderItemsWithDetails
       });
       
-      // Clear the cart after successful order
-      clearCart();
-      
-      // Show the confirmation dialog
+      // Show the confirmation dialog first, then clear the cart
       setOrderSuccess(true);
+      
+      // Important: Now we do NOT clear the cart here immediately
+      // It will be cleared after the user interacts with the confirmation dialog
       
     } catch (error: any) {
       toast({
@@ -171,6 +171,7 @@ export default function CheckoutForm() {
         description: error.message || "There was an error processing your order.",
         variant: "destructive"
       });
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -417,6 +418,8 @@ export default function CheckoutForm() {
         onOpenChange={(open) => {
           setOrderSuccess(open);
           if (!open) {
+            // Only clear the cart when closing the dialog
+            clearCart();
             // If dialog is closed without continuing shopping, redirect to home
             navigate('/');
           }
