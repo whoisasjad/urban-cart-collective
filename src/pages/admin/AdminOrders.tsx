@@ -22,6 +22,8 @@ import { Eye, Search } from 'lucide-react';
 import { formatCurrency } from "@/lib/utils";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AdminOrders() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -33,26 +35,32 @@ export default function AdminOrders() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders', filterStatus],
     queryFn: async () => {
-      let query = supabase
-        .from('orders')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (filterStatus) {
-        query = query.eq('status', filterStatus);
+      try {
+        let query = supabase
+          .from('orders')
+          .select(`
+            *,
+            profiles:user_id (
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .order('created_at', { ascending: false });
+        
+        if (filterStatus) {
+          query = query.eq('status', filterStatus);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        console.log('Orders fetched:', data);
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        throw error;
       }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return data || [];
     }
   });
 
@@ -61,19 +69,25 @@ export default function AdminOrders() {
     queryFn: async () => {
       if (!selectedOrder?.id) return [];
       
-      const { data, error } = await supabase
-        .from('order_items')
-        .select(`
-          *,
-          products:product_id (
-            name,
-            image_url
-          )
-        `)
-        .eq('order_id', selectedOrder.id);
-      
-      if (error) throw error;
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from('order_items')
+          .select(`
+            *,
+            products:product_id (
+              name,
+              image_url
+            )
+          `)
+          .eq('order_id', selectedOrder.id);
+        
+        if (error) throw error;
+        console.log('Order items fetched:', data);
+        return data || [];
+      } catch (error) {
+        console.error('Error fetching order items:', error);
+        return [];
+      }
     },
     enabled: !!selectedOrder?.id
   });
@@ -81,17 +95,40 @@ export default function AdminOrders() {
   // Add mutation for updating order status
   const updateOrderMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status })
-        .eq('id', orderId);
-      
-      if (error) throw error;
-      return { orderId, status };
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .update({ status })
+          .eq('id', orderId);
+        
+        if (error) throw error;
+        return { orderId, status };
+      } catch (error) {
+        console.error('Error updating order status:', error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['order-items', selectedOrder?.id] });
+      toast({
+        title: "Order Updated",
+        description: `Order status changed to ${data.status}`,
+      });
+      
+      // Update the local state as well
+      if (selectedOrder && selectedOrder.id === data.orderId) {
+        setSelectedOrder({
+          ...selectedOrder,
+          status: data.status
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update order status",
+        variant: "destructive",
+      });
     }
   });
 
@@ -100,12 +137,6 @@ export default function AdminOrders() {
     
     updateOrderMutation.mutate({
       orderId: selectedOrder.id,
-      status
-    });
-    
-    // Update the local state as well
-    setSelectedOrder({
-      ...selectedOrder,
       status
     });
   };
@@ -158,8 +189,31 @@ export default function AdminOrders() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-urban-purple border-t-transparent"></div>
+        <div className="rounded-md border border-urban-purple/30 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-urban-dark/50 border-b border-urban-purple/30">
+                <TableHead className="text-white">Order ID</TableHead>
+                <TableHead className="text-white">Customer</TableHead>
+                <TableHead className="text-white">Date</TableHead>
+                <TableHead className="text-white">Status</TableHead>
+                <TableHead className="text-white">Total</TableHead>
+                <TableHead className="text-white text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[1, 2, 3].map((i) => (
+                <TableRow key={i} className="border-b border-urban-purple/20">
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-full ml-auto" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       ) : filteredOrders && filteredOrders.length > 0 ? (
         <div className="rounded-md border border-urban-purple/30 overflow-hidden">
@@ -312,7 +366,7 @@ export default function AdminOrders() {
                   <div className="flex justify-center py-4">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-urban-purple border-t-transparent"></div>
                   </div>
-                ) : (
+                ) : orderItems && orderItems.length > 0 ? (
                   <div className="border border-urban-purple/30 rounded-md overflow-hidden">
                     <Table>
                       <TableHeader>
@@ -325,16 +379,18 @@ export default function AdminOrders() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {orderItems?.map((item: any) => (
+                        {orderItems.map((item: any) => (
                           <TableRow key={item.id} className="border-b border-urban-purple/20">
                             <TableCell>
                               <div className="flex items-center">
-                                <img 
-                                  src={item.products?.image_url} 
-                                  alt={item.products?.name} 
-                                  className="w-10 h-10 object-cover rounded mr-3"
-                                />
-                                {item.products?.name}
+                                {item.products?.image_url && (
+                                  <img 
+                                    src={item.products.image_url} 
+                                    alt={item.products?.name || 'Product'} 
+                                    className="w-10 h-10 object-cover rounded mr-3"
+                                  />
+                                )}
+                                {item.products?.name || 'Product'}
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
@@ -353,6 +409,10 @@ export default function AdminOrders() {
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 border border-urban-purple/30 rounded-md">
+                    <p className="text-muted-foreground">No items found</p>
                   </div>
                 )}
               </div>
