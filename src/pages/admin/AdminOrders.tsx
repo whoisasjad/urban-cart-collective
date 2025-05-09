@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/AdminLayout';
 import {
@@ -28,6 +28,7 @@ export default function AdminOrders() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['admin-orders', filterStatus],
@@ -77,6 +78,38 @@ export default function AdminOrders() {
     enabled: !!selectedOrder?.id
   });
 
+  // Add mutation for updating order status
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      return { orderId, status };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-items', selectedOrder?.id] });
+    }
+  });
+
+  const handleStatusChange = (status: string) => {
+    if (!selectedOrder) return;
+    
+    updateOrderMutation.mutate({
+      orderId: selectedOrder.id,
+      status
+    });
+    
+    // Update the local state as well
+    setSelectedOrder({
+      ...selectedOrder,
+      status
+    });
+  };
+
   const viewOrderDetails = (order: any) => {
     setSelectedOrder(order);
     setIsDialogOpen(true);
@@ -109,12 +142,12 @@ export default function AdminOrders() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Select value={filterStatus || ''} onValueChange={(value) => setFilterStatus(value || null)}>
+          <Select value={filterStatus || "all"} onValueChange={(value) => setFilterStatus(value === "all" ? null : value)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="processing">Processing</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
@@ -224,7 +257,7 @@ export default function AdminOrders() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <Select defaultValue={selectedOrder.status}>
+                  <Select value={selectedOrder.status} onValueChange={handleStatusChange}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -348,8 +381,11 @@ export default function AdminOrders() {
               </div>
               
               <div className="flex justify-end space-x-2 pt-4">
-                <Button className="bg-urban-purple hover:bg-urban-magenta">
-                  Update Order
+                <Button 
+                  className="bg-urban-purple hover:bg-urban-magenta"
+                  onClick={() => setIsDialogOpen(false)}
+                >
+                  Close
                 </Button>
               </div>
             </div>
