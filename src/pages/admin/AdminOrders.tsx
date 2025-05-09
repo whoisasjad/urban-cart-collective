@@ -32,31 +32,49 @@ export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, error } = useQuery({
     queryKey: ['admin-orders', filterStatus],
     queryFn: async () => {
       try {
+        // First, get the orders
         let query = supabase
           .from('orders')
-          .select(`
-            *,
-            profiles:user_id (
-              first_name,
-              last_name,
-              email
-            )
-          `)
+          .select('*')
           .order('created_at', { ascending: false });
         
         if (filterStatus) {
           query = query.eq('status', filterStatus);
         }
         
-        const { data, error } = await query;
+        const { data: ordersData, error: ordersError } = await query;
         
-        if (error) throw error;
-        console.log('Orders fetched:', data);
-        return data || [];
+        if (ordersError) throw ordersError;
+        
+        // Then, for each order, get the user profile information
+        if (ordersData && ordersData.length > 0) {
+          const ordersWithProfiles = await Promise.all(
+            ordersData.map(async (order) => {
+              if (order.user_id) {
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name, email')
+                  .eq('id', order.user_id)
+                  .single();
+                
+                return {
+                  ...order,
+                  profiles: profileData || null
+                };
+              }
+              return order;
+            })
+          );
+          
+          console.log('Orders with profiles fetched:', ordersWithProfiles);
+          return ordersWithProfiles;
+        }
+        
+        return ordersData || [];
       } catch (error) {
         console.error('Error fetching orders:', error);
         throw error;
@@ -159,6 +177,20 @@ export default function AdminOrders() {
            lastName.includes(searchLower);
   });
 
+  if (error) {
+    console.error('Error loading orders:', error);
+    return (
+      <AdminLayout>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Orders</h1>
+        </div>
+        <div className="text-center py-8 border border-red-500/30 rounded-md bg-red-500/10">
+          <p className="text-red-500">Error loading orders: {(error as any).message || 'Unknown error'}</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-8">
@@ -233,7 +265,7 @@ export default function AdminOrders() {
                 <TableRow key={order.id} className="border-b border-urban-purple/20">
                   <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
                   <TableCell>
-                    {order.profiles?.first_name} {order.profiles?.last_name || ''}
+                    {order.profiles?.first_name || 'Unknown'} {order.profiles?.last_name || ''}
                   </TableCell>
                   <TableCell>
                     {new Date(order.created_at).toLocaleDateString('en-US', {
@@ -305,9 +337,9 @@ export default function AdminOrders() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Customer</p>
                   <p className="font-medium">
-                    {selectedOrder.profiles?.first_name} {selectedOrder.profiles?.last_name || ''}
+                    {selectedOrder.profiles?.first_name || 'Unknown'} {selectedOrder.profiles?.last_name || ''}
                   </p>
-                  <p className="text-sm text-muted-foreground">{selectedOrder.profiles?.email}</p>
+                  <p className="text-sm text-muted-foreground">{selectedOrder.profiles?.email || 'No email available'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Status</p>
@@ -329,14 +361,16 @@ export default function AdminOrders() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Shipping Address</p>
                   <div className="p-3 border border-urban-purple/30 rounded-md">
-                    {selectedOrder.shipping_address.name && (
+                    {selectedOrder.shipping_address?.name && (
                       <p className="font-medium">{selectedOrder.shipping_address.name}</p>
                     )}
-                    <p>{selectedOrder.shipping_address.street}</p>
-                    <p>
-                      {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.zip}
-                    </p>
-                    {selectedOrder.shipping_address.country && (
+                    <p>{selectedOrder.shipping_address?.street || 'No address available'}</p>
+                    {selectedOrder.shipping_address?.city && selectedOrder.shipping_address?.state && (
+                      <p>
+                        {selectedOrder.shipping_address.city}, {selectedOrder.shipping_address.state} {selectedOrder.shipping_address.zip}
+                      </p>
+                    )}
+                    {selectedOrder.shipping_address?.country && (
                       <p>{selectedOrder.shipping_address.country}</p>
                     )}
                   </div>
@@ -348,11 +382,13 @@ export default function AdminOrders() {
                       {selectedOrder.billing_address.name && (
                         <p className="font-medium">{selectedOrder.billing_address.name}</p>
                       )}
-                      <p>{selectedOrder.billing_address.street}</p>
-                      <p>
-                        {selectedOrder.billing_address.city}, {selectedOrder.billing_address.state} {selectedOrder.billing_address.zip}
-                      </p>
-                      {selectedOrder.billing_address.country && (
+                      <p>{selectedOrder.billing_address.street || 'No address available'}</p>
+                      {selectedOrder.billing_address?.city && selectedOrder.billing_address?.state && (
+                        <p>
+                          {selectedOrder.billing_address.city}, {selectedOrder.billing_address.state} {selectedOrder.billing_address.zip}
+                        </p>
+                      )}
+                      {selectedOrder.billing_address?.country && (
                         <p>{selectedOrder.billing_address.country}</p>
                       )}
                     </div>
@@ -420,7 +456,7 @@ export default function AdminOrders() {
               <div>
                 <div className="flex justify-between py-2">
                   <p className="text-muted-foreground">Subtotal</p>
-                  <p className="font-medium">{formatCurrency(selectedOrder.total - selectedOrder.shipping_cost - selectedOrder.tax)}</p>
+                  <p className="font-medium">{formatCurrency(selectedOrder.total - (selectedOrder.shipping_cost || 0) - (selectedOrder.tax || 0))}</p>
                 </div>
                 {selectedOrder.shipping_cost > 0 && (
                   <div className="flex justify-between py-2">

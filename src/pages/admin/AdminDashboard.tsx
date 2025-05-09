@@ -89,24 +89,46 @@ export default function AdminDashboard() {
     queryKey: ['recent-orders'],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
+        // First get the orders
+        const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select(`
             id,
             total,
             status,
             created_at,
-            profiles:user_id (
-              first_name,
-              last_name
-            )
+            user_id
           `)
           .order('created_at', { ascending: false })
           .limit(5);
         
-        if (error) throw error;
-        console.log('Recent orders fetched:', data);
-        return data || [];
+        if (ordersError) throw ordersError;
+        
+        // Then get the profile information for each order's user
+        if (ordersData && ordersData.length > 0) {
+          const ordersWithProfiles = await Promise.all(
+            ordersData.map(async (order) => {
+              if (order.user_id) {
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('first_name, last_name')
+                  .eq('id', order.user_id)
+                  .single();
+                
+                return {
+                  ...order,
+                  profiles: profileData || null
+                };
+              }
+              return order;
+            })
+          );
+          
+          console.log('Recent orders fetched:', ordersWithProfiles);
+          return ordersWithProfiles;
+        }
+        
+        return ordersData || [];
       } catch (error) {
         console.error('Error fetching recent orders:', error);
         return [];
@@ -168,7 +190,7 @@ export default function AdminDashboard() {
   });
 
   // Calculate revenue change percentage based on history
-  const { data: revenueChangePercent } = useQuery({
+  const { data: revenueChangePercent, isLoading: isRevenueChangeLoading } = useQuery({
     queryKey: ['revenue-change'],
     queryFn: async () => {
       try {
@@ -176,18 +198,23 @@ export default function AdminDashboard() {
         const lastMonth = new Date();
         lastMonth.setMonth(now.getMonth() - 1);
         
+        // Format dates to YYYY-MM-DD format for the database query
+        const currentMonthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const lastMonthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}-01`;
+        const lastMonthEnd = currentMonthStart;
+        
         // Get current month revenue
         const { data: currentMonthOrders, error: currentError } = await supabase
           .from('orders')
           .select('total')
-          .gte('created_at', now.toISOString().substring(0, 7));
+          .gte('created_at', currentMonthStart);
           
         // Get last month revenue
         const { data: lastMonthOrders, error: lastError } = await supabase
           .from('orders')
           .select('total')
-          .gte('created_at', lastMonth.toISOString().substring(0, 7))
-          .lt('created_at', now.toISOString().substring(0, 7));
+          .gte('created_at', lastMonthStart)
+          .lt('created_at', lastMonthEnd);
           
         if (currentError || lastError) throw currentError || lastError;
         
@@ -198,7 +225,7 @@ export default function AdminDashboard() {
         return isNaN(changePercent) ? 0 : Math.round(changePercent);
       } catch (error) {
         console.error('Error calculating revenue change:', error);
-        return 5; // Default fallback value
+        return 0; // Default fallback value
       }
     }
   });
@@ -223,7 +250,9 @@ export default function AdminDashboard() {
                     {formatCurrency(totalRevenue || 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {revenueChangePercent !== undefined && (
+                    {isRevenueChangeLoading ? (
+                      <Skeleton className="h-3 w-24" />
+                    ) : revenueChangePercent !== undefined && (
                       <span className={revenueChangePercent >= 0 ? "text-green-500" : "text-red-500"}>
                         {revenueChangePercent >= 0 ? "+" : ""}{revenueChangePercent}% from last month
                       </span>
@@ -247,7 +276,7 @@ export default function AdminDashboard() {
                 <ShoppingCart className="h-8 w-8 text-urban-purple mr-3" />
                 <div>
                   <div className="text-2xl font-bold">{ordersCount || 0}</div>
-                  <p className="text-xs text-muted-foreground">+5% from last month</p>
+                  <p className="text-xs text-muted-foreground">Total orders</p>
                 </div>
               </div>
             )}
@@ -285,7 +314,7 @@ export default function AdminDashboard() {
                 <Users className="h-8 w-8 text-urban-purple mr-3" />
                 <div>
                   <div className="text-2xl font-bold">{customerCount || 0}</div>
-                  <p className="text-xs text-muted-foreground">+18% from last month</p>
+                  <p className="text-xs text-muted-foreground">Registered users</p>
                 </div>
               </div>
             )}
