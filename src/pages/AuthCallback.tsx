@@ -27,16 +27,15 @@ export default function AuthCallback() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        // Check if the profile has required information
+        // Check if the profile exists and has required information
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('first_name, last_name, address, city, state, postal_code, country, phone')
           .eq('id', user.id)
           .single();
         
-        if (profileError || !profile.first_name || !profile.address) {
+        if (profileError || !profile || !profile.first_name || !profile.address) {
           // If we're missing profile data, redirect to complete profile
-          // For now, just go to the profile page where the user can update their info
           toast({
             title: "Welcome!",
             description: "Please complete your profile information.",

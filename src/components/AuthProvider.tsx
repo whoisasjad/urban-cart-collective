@@ -9,6 +9,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   loading: boolean;
   googleSignIn: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,9 +53,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
   };
+  
+  // Add a function to refresh user profile data
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) {
+        console.error('Error refreshing profile:', error);
+      }
+      
+      // We don't need to update state here as this just refreshes the profile in the database
+      return data;
+    } catch (error) {
+      console.error('Failed to refresh profile:', error);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ session, user, signOut, loading, googleSignIn }}>
+    <AuthContext.Provider value={{ session, user, signOut, loading, googleSignIn, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

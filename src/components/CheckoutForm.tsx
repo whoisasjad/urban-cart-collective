@@ -45,7 +45,7 @@ const shippingSchema = z.object({
 
 export default function CheckoutForm() {
   const { cart, cartTotal, clearCart } = useStore();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -56,6 +56,7 @@ export default function CheckoutForm() {
   const [sendingEmails, setSendingEmails] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [addressChoice, setAddressChoice] = useState('default');
+  const [fetchingProfile, setFetchingProfile] = useState(true);
   
   // Initialize form with react-hook-form
   const form = useForm({
@@ -76,31 +77,57 @@ export default function CheckoutForm() {
   // Fetch the user's profile data on component mount
   useEffect(() => {
     const fetchUserProfile = async () => {
+      setFetchingProfile(true);
       if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        
-        if (!error && data) {
-          setUserProfile(data);
+        try {
+          await refreshProfile(); // First refresh profile to ensure we have the latest data
           
-          // Pre-fill the form with the profile data if available
-          if (data.first_name) form.setValue('firstName', data.first_name);
-          if (data.last_name) form.setValue('lastName', data.last_name);
-          if (data.address) form.setValue('address', data.address);
-          if (data.city) form.setValue('city', data.city);
-          if (data.state) form.setValue('state', data.state);
-          if (data.postal_code) form.setValue('postalCode', data.postal_code);
-          if (data.country) form.setValue('country', data.country);
-          if (data.phone) form.setValue('phone', data.phone);
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (!error && data) {
+            console.log("Loaded profile:", data);
+            setUserProfile(data);
+            
+            // Pre-fill the form with the profile data if available
+            if (data.first_name) form.setValue('firstName', data.first_name);
+            if (data.last_name) form.setValue('lastName', data.last_name);
+            if (data.address) form.setValue('address', data.address);
+            if (data.city) form.setValue('city', data.city);
+            if (data.state) form.setValue('state', data.state);
+            if (data.postal_code) form.setValue('postalCode', data.postal_code);
+            if (data.country) form.setValue('country', data.country);
+            if (data.phone) form.setValue('phone', data.phone);
+          } else {
+            console.error("Error fetching profile or no profile found:", error);
+            toast({
+              title: "Profile not found",
+              description: "We couldn't find your profile information. Please complete your profile.",
+              variant: "destructive"
+            });
+            
+            // If no profile, consider redirecting to profile page
+            if (!data) {
+              setTimeout(() => {
+                navigate('/profile');
+              }, 2000);
+            }
+          }
+        } catch (err) {
+          console.error("Error in fetchUserProfile:", err);
+        } finally {
+          setFetchingProfile(false);
         }
+      } else {
+        setFetchingProfile(false);
       }
     };
     
     fetchUserProfile();
-  }, [user, form]);
+  }, [user, form, navigate, toast, refreshProfile]);
   
   // Handle address choice change
   useEffect(() => {
@@ -257,6 +284,9 @@ export default function CheckoutForm() {
           
         if (updateError) {
           console.error("Error updating profile with new address:", updateError);
+        } else {
+          // Refresh the profile after updating
+          await refreshProfile();
         }
       }
       
@@ -362,6 +392,19 @@ export default function CheckoutForm() {
   );
   
   const hasDefaultAddress = userProfile && userProfile.address;
+  
+  if (fetchingProfile) {
+    return (
+      <div className="max-w-3xl mx-auto mt-8">
+        <div className="urban-card p-6">
+          <div className="flex justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-urban-purple border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+          </div>
+          <p className="text-center mt-4 text-white">Loading your profile information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto">

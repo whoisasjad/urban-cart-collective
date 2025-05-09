@@ -118,10 +118,11 @@ export default function AuthPage() {
       if (signUpError) throw signUpError;
       
       if (authData.user) {
-        // Update the profile with additional information
+        // Create or update the profile with additional information
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({
+          .upsert({
+            id: authData.user.id,
             first_name: data.firstName,
             last_name: data.lastName,
             address: data.address,
@@ -130,8 +131,7 @@ export default function AuthPage() {
             postal_code: data.postalCode,
             country: data.country,
             phone: data.phone,
-          })
-          .eq('id', authData.user.id);
+          });
 
         if (profileError) {
           console.error("Error updating profile:", profileError);

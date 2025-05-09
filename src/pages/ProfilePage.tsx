@@ -31,7 +31,7 @@ type Order = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -46,15 +46,28 @@ export default function ProfilePage() {
     }
 
     async function loadProfile() {
+      setLoading(true);
       try {
+        // First refresh profile to ensure we have the latest data
+        await refreshProfile();
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
         
-        if (error) throw error;
-        setProfile(data);
+        if (error) {
+          console.error("Profile fetch error:", error);
+          toast({
+            title: "Error",
+            description: "There was an error loading your profile.",
+            variant: "destructive"
+          });
+        } else {
+          console.log("Profile loaded:", data);
+          setProfile(data);
+        }
         
         // Load orders
         const { data: orderData, error: orderError } = await supabase
@@ -63,8 +76,11 @@ export default function ProfilePage() {
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
-        if (orderError) throw orderError;
-        setOrders(orderData);
+        if (orderError) {
+          console.error("Orders fetch error:", orderError);
+        } else {
+          setOrders(orderData || []);
+        }
         
       } catch (error) {
         console.error('Error loading profile:', error);
@@ -74,7 +90,7 @@ export default function ProfilePage() {
     }
 
     loadProfile();
-  }, [user, navigate]);
+  }, [user, navigate, toast, refreshProfile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile) return;
@@ -87,7 +103,7 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    if (!profile || !user) return;
     
     setSaving(true);
     try {
@@ -106,6 +122,8 @@ export default function ProfilePage() {
         .eq('id', profile.id);
       
       if (error) throw error;
+      
+      await refreshProfile();
       
       toast({
         title: "Profile updated",
@@ -175,7 +193,7 @@ export default function ProfilePage() {
                     <Input
                       id="first_name"
                       name="first_name"
-                      value={profile.first_name || ''}
+                      value={profile?.first_name || ''}
                       onChange={handleChange}
                     />
                   </div>
@@ -186,7 +204,7 @@ export default function ProfilePage() {
                     <Input
                       id="last_name"
                       name="last_name"
-                      value={profile.last_name || ''}
+                      value={profile?.last_name || ''}
                       onChange={handleChange}
                     />
                   </div>
@@ -211,7 +229,7 @@ export default function ProfilePage() {
                   <Input
                     id="address"
                     name="address"
-                    value={profile.address || ''}
+                    value={profile?.address || ''}
                     onChange={handleChange}
                   />
                 </div>
@@ -224,7 +242,7 @@ export default function ProfilePage() {
                     <Input
                       id="city"
                       name="city"
-                      value={profile.city || ''}
+                      value={profile?.city || ''}
                       onChange={handleChange}
                     />
                   </div>
@@ -235,7 +253,7 @@ export default function ProfilePage() {
                     <Input
                       id="state"
                       name="state"
-                      value={profile.state || ''}
+                      value={profile?.state || ''}
                       onChange={handleChange}
                     />
                   </div>
@@ -249,7 +267,7 @@ export default function ProfilePage() {
                     <Input
                       id="postal_code"
                       name="postal_code"
-                      value={profile.postal_code || ''}
+                      value={profile?.postal_code || ''}
                       onChange={handleChange}
                     />
                   </div>
@@ -260,7 +278,7 @@ export default function ProfilePage() {
                     <Input
                       id="country"
                       name="country"
-                      value={profile.country || ''}
+                      value={profile?.country || ''}
                       onChange={handleChange}
                     />
                   </div>
@@ -273,7 +291,7 @@ export default function ProfilePage() {
                   <Input
                     id="phone"
                     name="phone"
-                    value={profile.phone || ''}
+                    value={profile?.phone || ''}
                     onChange={handleChange}
                   />
                 </div>
