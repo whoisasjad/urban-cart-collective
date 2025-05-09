@@ -8,6 +8,7 @@ type AuthContextType = {
   user: User | null;
   signOut: () => Promise<void>;
   loading: boolean;
+  googleSignIn: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,8 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const googleSignIn = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      }
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, signOut, loading }}>
+    <AuthContext.Provider value={{ session, user, signOut, loading, googleSignIn }}>
       {children}
     </AuthContext.Provider>
   );

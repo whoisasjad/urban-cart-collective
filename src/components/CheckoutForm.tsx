@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/context/StoreContext';
 import { useAuth } from '@/components/AuthProvider';
@@ -9,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CreditCard, Banknote, Building, MessageSquare } from 'lucide-react';
+import { CreditCard, Banknote, Building, MessageSquare, Home, PlusCircle } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -25,7 +24,24 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Checkbox } from '@/components/ui/checkbox';
 import OrderConfirmation from './OrderConfirmation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+// Define the validation schema for shipping information
+const shippingSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  postalCode: z.string().min(1, "Postal code is required"),
+  country: z.string().min(1, "Country is required"),
+  phone: z.string().min(1, "Phone number is required"),
+  useDefaultAddress: z.boolean().optional(),
+});
 
 export default function CheckoutForm() {
   const { cart, cartTotal, clearCart } = useStore();
@@ -33,32 +49,86 @@ export default function CheckoutForm() {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    address: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: 'United States',
-    phone: ''
-  });
-  
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
   const [sendingEmails, setSendingEmails] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [addressChoice, setAddressChoice] = useState('default');
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
+  // Initialize form with react-hook-form
+  const form = useForm({
+    resolver: zodResolver(shippingSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      address: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: 'United States',
+      phone: '',
+      useDefaultAddress: true,
+    }
+  });
+
+  // Fetch the user's profile data on component mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (!error && data) {
+          setUserProfile(data);
+          
+          // Pre-fill the form with the profile data if available
+          if (data.first_name) form.setValue('firstName', data.first_name);
+          if (data.last_name) form.setValue('lastName', data.last_name);
+          if (data.address) form.setValue('address', data.address);
+          if (data.city) form.setValue('city', data.city);
+          if (data.state) form.setValue('state', data.state);
+          if (data.postal_code) form.setValue('postalCode', data.postal_code);
+          if (data.country) form.setValue('country', data.country);
+          if (data.phone) form.setValue('phone', data.phone);
+        }
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user, form]);
+  
+  // Handle address choice change
+  useEffect(() => {
+    if (addressChoice === 'default' && userProfile) {
+      // Fill form with user's default address
+      form.setValue('firstName', userProfile.first_name || '');
+      form.setValue('lastName', userProfile.last_name || '');
+      form.setValue('address', userProfile.address || '');
+      form.setValue('city', userProfile.city || '');
+      form.setValue('state', userProfile.state || '');
+      form.setValue('postalCode', userProfile.postal_code || '');
+      form.setValue('country', userProfile.country || 'United States');
+      form.setValue('phone', userProfile.phone || '');
+    } else if (addressChoice === 'new') {
+      // Reset form fields for new address
+      form.setValue('firstName', '');
+      form.setValue('lastName', '');
+      form.setValue('address', '');
+      form.setValue('city', '');
+      form.setValue('state', '');
+      form.setValue('postalCode', '');
+      form.setValue('country', 'United States');
+      form.setValue('phone', '');
+    }
+  }, [addressChoice, userProfile, form]);
 
   // Function to send order confirmation emails
-  const sendOrderEmails = async (orderDetails: any, userEmail: string) => {
+  const sendOrderEmails = async (orderDetails, userEmail) => {
     try {
       setSendingEmails(true);
       
@@ -98,9 +168,7 @@ export default function CheckoutForm() {
     }
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleCheckout = async (formData) => {
     if (!user) {
       toast({
         title: "Please sign in",
@@ -171,6 +239,27 @@ export default function CheckoutForm() {
         throw itemsError;
       }
       
+      // If the user used a new address and wants to save it as their default
+      if (addressChoice === 'new' && formData.useDefaultAddress) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            postal_code: formData.postalCode,
+            country: formData.country,
+            phone: formData.phone
+          })
+          .eq('id', user.id);
+          
+        if (updateError) {
+          console.error("Error updating profile with new address:", updateError);
+        }
+      }
+      
       // Fetch product details for the order items
       const productIds = cart.map(item => item.product.id);
       const { data: products } = await supabase
@@ -211,7 +300,7 @@ export default function CheckoutForm() {
         await sendOrderEmails(completeOrderDetails, user.email);
       }
       
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message || "There was an error processing your order.",
@@ -272,6 +361,8 @@ export default function CheckoutForm() {
     </div>
   );
   
+  const hasDefaultAddress = userProfile && userProfile.address;
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-white mb-6">Checkout</h1>
@@ -302,118 +393,200 @@ export default function CheckoutForm() {
         </div>
       </div>
       
-      <div className="urban-card p-6 mb-8">
-        <h2 className="text-xl font-bold text-white mb-4">Shipping Information</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="firstName" className="block text-sm text-muted-foreground mb-1">
-                First Name
-              </label>
-              <Input
-                id="firstName"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-6">
+          <div className="urban-card p-6 mb-8">
+            <h2 className="text-xl font-bold text-white mb-4">Shipping Information</h2>
+            
+            {/* Address selection - only show if user has a saved address */}
+            {hasDefaultAddress && (
+              <div className="mb-6 space-y-4">
+                <h3 className="text-lg font-medium text-white">Choose Shipping Address</h3>
+                
+                <RadioGroup 
+                  value={addressChoice} 
+                  onValueChange={setAddressChoice}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+                >
+                  <div className={`border p-4 rounded-md ${addressChoice === 'default' ? 'border-urban-purple' : 'border-gray-700'}`}>
+                    <label className="flex items-start space-x-3 cursor-pointer">
+                      <RadioGroupItem value="default" id="default-address" className="mt-1" />
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Home className="h-4 w-4 text-urban-purple mr-2" />
+                          <p className="font-medium text-white">Use Your Default Address</p>
+                        </div>
+                        {userProfile && (
+                          <div className="text-sm text-gray-400">
+                            <p>{userProfile.first_name} {userProfile.last_name}</p>
+                            <p>{userProfile.address}</p>
+                            <p>{userProfile.city}, {userProfile.state} {userProfile.postal_code}</p>
+                            <p>{userProfile.country}</p>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                  
+                  <div className={`border p-4 rounded-md ${addressChoice === 'new' ? 'border-urban-purple' : 'border-gray-700'}`}>
+                    <label className="flex items-start space-x-3 cursor-pointer">
+                      <RadioGroupItem value="new" id="new-address" className="mt-1" />
+                      <div>
+                        <div className="flex items-center">
+                          <PlusCircle className="h-4 w-4 text-urban-purple mr-2" />
+                          <p className="font-medium text-white">Use a New Address</p>
+                        </div>
+                        <p className="text-sm text-gray-400">Enter a new shipping address for this order</p>
+                      </div>
+                    </label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+          
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">First Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={addressChoice === 'default'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm text-muted-foreground mb-1">
-                Last Name
-              </label>
-              <Input
-                id="lastName"
+              
+              <FormField
+                control={form.control}
                 name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Last Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={addressChoice === 'default'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-          
-          <div>
-            <label htmlFor="address" className="block text-sm text-muted-foreground mb-1">
-              Address
-            </label>
-            <Input
-              id="address"
+            
+            <FormField
+              control={form.control}
               name="address"
-              value={formData.address}
-              onChange={handleChange}
-              required
+              render={({ field }) => (
+                <FormItem className="mt-4">
+                  <FormLabel className="text-muted-foreground">Address</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled={addressChoice === 'default'} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="city" className="block text-sm text-muted-foreground mb-1">
-                City
-              </label>
-              <Input
-                id="city"
+            
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <FormField
+                control={form.control}
                 name="city"
-                value={formData.city}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">City</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={addressChoice === 'default'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="state" className="block text-sm text-muted-foreground mb-1">
-                State/Province
-              </label>
-              <Input
-                id="state"
+              
+              <FormField
+                control={form.control}
                 name="state"
-                value={formData.state}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">State/Province</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={addressChoice === 'default'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="postalCode" className="block text-sm text-muted-foreground mb-1">
-                Postal Code
-              </label>
-              <Input
-                id="postalCode"
+            
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <FormField
+                control={form.control}
                 name="postalCode"
-                value={formData.postalCode}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Postal Code</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={addressChoice === 'default'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <label htmlFor="country" className="block text-sm text-muted-foreground mb-1">
-                Country
-              </label>
-              <Input
-                id="country"
+              
+              <FormField
+                control={form.control}
                 name="country"
-                value={formData.country}
-                onChange={handleChange}
-                required
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground">Country</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={addressChoice === 'default'} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-          
-          <div>
-            <label htmlFor="phone" className="block text-sm text-muted-foreground mb-1">
-              Phone Number
-            </label>
-            <Input
-              id="phone"
+            
+            <FormField
+              control={form.control}
               name="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={handleChange}
-              required
+              render={({ field }) => (
+                <FormItem className="mt-4">
+                  <FormLabel className="text-muted-foreground">Phone Number</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="tel" disabled={addressChoice === 'default'} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
+
+            {/* Option to save new address as default */}
+            {addressChoice === 'new' && (
+              <FormField
+                control={form.control}
+                name="useDefaultAddress"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-6">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-white">
+                        Save as my default shipping address
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
           
-          <div className="mt-6">
+          <div className="urban-card p-6">
             <h3 className="text-lg font-medium text-white mb-3">Payment Method</h3>
             <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
               <label className="flex items-center space-x-3 p-3 border border-urban-purple/30 rounded-md cursor-pointer hover:bg-secondary/20">
@@ -450,13 +623,13 @@ export default function CheckoutForm() {
           
           <Button
             type="submit"
-            className="w-full bg-urban-purple hover:bg-urban-magenta mt-8"
+            className="w-full bg-urban-purple hover:bg-urban-magenta mt-4"
             disabled={loading || sendingEmails}
           >
             {loading ? "Processing..." : sendingEmails ? "Sending Confirmation..." : "Complete Purchase"}
           </Button>
         </form>
-      </div>
+      </Form>
       
       {/* Order confirmation dialog */}
       <OrderConfirmation 
